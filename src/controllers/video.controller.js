@@ -8,28 +8,25 @@ import {deleteFromCloudinary, uploadOnCloudinary} from "../utils/cloudinary.js"
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-    //TODO: get all videos based on query, sort, pagination
+    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
 
     const pipeline = [];
 
-    // created search index in mongodb atlas with fields as title and description
-    
     if (query?.trim()) {
         pipeline.push({
             $search: {
-                index: "video-search",      // name of search index
+                index: "video-search",
                 text: {
                     query: query,
-                    path: ["title", "description"]      //search only on title, description
+                    path: ["title", "description"]
                 }
             }
         });
     }
 
-    if(userId?.trim()){
-        if(!isValidObjectId(userId)){
-            throw new ApiError(400, "Invalid User Id")
+    if (userId?.trim()) {
+        if (!isValidObjectId(userId)) {
+            throw new ApiError(400, "Invalid User Id");
         }
 
         pipeline.push({
@@ -39,19 +36,18 @@ const getAllVideos = asyncHandler(async (req, res) => {
         });
     }
 
-    // fetching only those videos that have isPublished as true
     pipeline.push({
         $match: {
             isPublished: true
         }
     });
 
-    if(sortBy?.trim() && sortType?.trim()){
+    if (sortBy?.trim() && sortType?.trim()) {
         pipeline.push({
             $sort: {
-                [sortBy]: sortType === "asc"? 1 : -1        //sortBy can be views, createdAt, duration
+                [sortBy]: sortType === "asc" ? 1 : -1
             }
-        })
+        });
     } else {
         pipeline.push({ $sort: { createdAt: -1 } });
     }
@@ -63,34 +59,34 @@ const getAllVideos = asyncHandler(async (req, res) => {
                 localField: "owner",
                 foreignField: "_id",
                 as: "ownerDetails",
-                pipeline: {
-                    $project: {
-                        username: 1,
-                        avatar: 1
+                pipeline: [
+                    {
+                        $project: {
+                            username: 1,
+                            avatar: 1
+                        }
                     }
-                }
+                ]
             }
         },
         {
             $unwind: "$ownerDetails"
         }
-    )
-
-    const videoAggregate = await Video.aggregate(pipeline);
+    );
 
     const options = {
         page: parseInt(page, 10),
         limit: parseInt(limit, 10)
     };
 
+    const videoAggregate = Video.aggregate(pipeline); // Not awaited here!
     const video = await Video.aggregatePaginate(videoAggregate, options);
 
-    return res
-    .status(200)
-    .json(
+    return res.status(200).json(
         new ApiResponse(200, video, "Videos fetched successfully")
-    )
-})
+    );
+});
+
 
 const publishAVideo = asyncHandler(async (req, res) => {
     const { title, description} = req.body
