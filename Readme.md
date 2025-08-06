@@ -1,4 +1,4 @@
-# 🎬 MegaBackend (YouTube Clone Backend)
+# 🎬 TweetTube (YouTube Clone Backend)
 
 This is a YouTube-inspired backend built with **Node.js**, **Express.js**, and **MongoDB**. It supports video uploads, user authentication, channel management, and image hosting with **Cloudinary**. Designed following MVC principles and built to be scalable, this project can be the foundation for a full-fledged video platform.
 
