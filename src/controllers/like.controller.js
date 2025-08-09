@@ -121,11 +121,10 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
 })
 
 const getLikedVideos = asyncHandler(async (req, res) => {
-    //TODO: get all liked videos
     const likedVideos = await Like.aggregate([
         {
             $match: {
-                likedBy: new mongoose.Types.ObjectId(req.user?._id)
+                likedBy: new mongoose.Types.ObjectId(req.user._id)
             }
         },
         {
@@ -135,22 +134,16 @@ const getLikedVideos = asyncHandler(async (req, res) => {
                 foreignField: "_id",
                 as: "likedVideos",
                 pipeline: [
+                    { $match: { isPublished: true } },
                     {
-                        $match: {
-                            isPublished: true
-                        }
-                    },
-                    {
-                        $lookup:{
+                        $lookup: {
                             from: "users",
                             localField: "owner",
                             foreignField: "_id",
                             as: "ownerDetails"
                         }
                     },
-                    {
-                        $unwind: "$ownerDetails"
-                    },
+                    { $unwind: "$ownerDetails" },
                     {
                         $project: {
                             _id: 1,
@@ -163,39 +156,27 @@ const getLikedVideos = asyncHandler(async (req, res) => {
                             duration: 1,
                             createdAt: 1,
                             isPublished: 1,
-                            ownerDetails: {
-                                username: 1,
-                                fullName: 1,
-                                "avatar.url": 1,
-                            },
+                            "ownerDetails.username": 1,
+                            "ownerDetails.fullName": 1,
+                            "ownerDetails.avatar.url": 1
                         }
                     }
                 ]
             }
         },
-        {
-            $unwind: "$likedVideo",
-        },
-        {
-            $replaceRoot: {
-                newRoot: "$likedVideo",
-            },
-        },
-        {
-            $sort: {
-                createdAt: -1,
-            },
-        },
-    ])
+        { $unwind: "$likedVideos" },
+        { $replaceRoot: { newRoot: "$likedVideos" } },
+        { $sort: { createdAt: -1 } }
+    ]);
 
-    if(!likedVideos?.length){
-        throw new ApiError(404, "No videos found")
+    if (!likedVideos.length) {
+        throw new ApiError(404, "No videos found");
     }
 
     return res.status(200).json(
         new ApiResponse(200, likedVideos, "Liked videos fetched successfully")
     );
-})
+});
 
 export {
     toggleCommentLike,
